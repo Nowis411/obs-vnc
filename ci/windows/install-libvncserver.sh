@@ -53,30 +53,19 @@ cmake . -A $CMakeOptA -DZLIB_INCLUDE_DIR=$OBSDeps/include -DZLIB_LIBRARY=$OBSDep
 cmake --build . --config $build_config
 cd ..
 
-# Berkeley DB - required by SASL
-# Use Oracle URL with tar extraction, ignore symlink errors (Java examples not needed)
-curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.tar.gz
-tar xzf db-4.1.25.tar.gz 2>/dev/null || true
-mv db-4.1.25 db
-cd db/build_win32
-# Use devenv.com (full path on GitHub Windows runners) to upgrade .dsp to .sln, then build with dotnet msbuild
-DEVENV_COM="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/devenv.com"
-"$DEVENV_COM" db_dll.dsp /upgrade
-dotnet msbuild db_dll.sln -p:Configuration=$build_config -p:Platform=$CMakeOptA
-cd ../..
+# Use vcpkg for Berkeley DB and Cyrus SASL (pre-installed on GitHub runners)
+# This avoids the slow devenv.com /upgrade step for Berkeley DB
+export VCPKG_ROOT=${VCPKG_ROOT:-/c/vcpkg}
+export PATH="$VCPKG_ROOT:$PATH"
 
-# Cyrus SASL
-curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
-tar xzf cyrus-sasl-2.1.28.tar.gz
-mv cyrus-sasl-2.1.28 sasl
-cd sasl
-cmake -G "Visual Studio 17 2022" -A $CMakeOptA \
-  -DOPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL \
-  -DDB_INCLUDE_DIR=$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/include \
-  -DDB_LIBRARY=$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/lib/libdb.lib \
-  .
-cmake --build . --config $build_config
-cd ..
+# Install Berkeley DB and Cyrus SASL via vcpkg
+# Use triplet matching our architecture
+VCPKG_TRIPLET="${CMakeOptA}-windows-static"
+if [ "$CMakeOptA" = "Win32" ]; then
+    VCPKG_TRIPLET="x86-windows-static"
+fi
+
+vcpkg install db:$VCPKG_TRIPLET cyrus-sasl:$VCPKG_TRIPLET --recurse
 
 # go back to source root
 cd ..
@@ -98,8 +87,8 @@ cmake \
 	-D WITH_EXAMPLES=OFF \
 	-D WITH_TESTS=OFF \
 	-DWITH_SASL=ON \
-	-DSASL_INCLUDE_DIR=$LIBVNCPath/deps/sasl/include \
-	-DSASL_LIBRARY=$LIBVNCPath/deps/sasl/$build_config/libsasl.lib \
+	-DSASL_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
+	-DSASL_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libsasl.lib \
 	-D CMAKE_BUILD_TYPE=$build_config \
 	.
 cmake --build . --config $build_config
