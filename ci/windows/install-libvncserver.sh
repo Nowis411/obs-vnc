@@ -54,12 +54,15 @@ cmake --build . --config $build_config
 cd ..
 
 # Berkeley DB - required by SASL
-# Use vcpkg (pre-installed on GitHub Windows runners) instead of building from source
-# This avoids the old .dsp/.sln upgrade hassle
-# Port name in vcpkg is 'db' (not 'berkeley-db')
-vcpkg install db:x64-windows-static
-# Set environment variables for CMake to find vcpkg-installed Berkeley DB
-export DB_ROOT="$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static"
+# Use Oracle URL with tar extraction, ignore symlink errors (Java examples not needed)
+curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.tar.gz
+tar xzf db-4.1.25.tar.gz 2>/dev/null || true
+mv db-4.1.25 db
+cd db/build_win32
+# Use devenv.com (available on GitHub Windows runners) to upgrade .dsp to .sln, then build with msbuild
+devenv.com db_dll.dsp /upgrade
+dotnet msbuild db_dll.sln -p:Configuration=$build_config -p:Platform=$CMakeOptA
+cd ../..
 
 # Cyrus SASL
 curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
