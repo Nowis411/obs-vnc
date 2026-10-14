@@ -65,7 +65,7 @@ if [ "$CMakeOptA" = "Win32" ]; then
     VCPKG_TRIPLET="x86-windows-static"
 fi
 
-vcpkg install db:$VCPKG_TRIPLET cyrus-sasl:$VCPKG_TRIPLET --recurse
+vcpkg install berkeleydb:$VCPKG_TRIPLET cyrus-sasl:$VCPKG_TRIPLET --recurse
 
 # go back to source root
 cd ..
