@@ -53,21 +53,34 @@ cmake . -A $CMakeOptA -DZLIB_INCLUDE_DIR=$OBSDeps/include -DZLIB_LIBRARY=$OBSDep
 cmake --build . --config $build_config
 cd ..
 
-# Use vcpkg for Berkeley DB and Cyrus SASL (pre-installed on GitHub runners)
+# Use vcpkg for Berkeley DB (pre-installed on GitHub runners)
 # This avoids the slow devenv.com /upgrade step for Berkeley DB
 export VCPKG_ROOT=${VCPKG_ROOT:-/c/vcpkg}
 export PATH="$VCPKG_ROOT:$PATH"
 
-# Install Berkeley DB and Cyrus SASL via vcpkg
+# Install Berkeley DB via vcpkg
 # Use triplet matching our architecture
 VCPKG_TRIPLET="${CMakeOptA}-windows-static"
 if [ "$CMakeOptA" = "Win32" ]; then
     VCPKG_TRIPLET="x86-windows-static"
 fi
 
-# krb5 (dependency of cyrus-sasl) doesn't build on static Windows.
-# Install cyrus-sasl without kerberos feature to avoid krb5 dependency.
-vcpkg install berkeleydb:$VCPKG_TRIPLET cyrus-sasl[~kerberos]:$VCPKG_TRIPLET --recurse
+vcpkg install berkeleydb:$VCPKG_TRIPLET --recurse
+
+# Build Cyrus SASL from source using vcpkg-installed Berkeley DB
+# This avoids krb5 build issues on static Windows
+curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
+tar xzf cyrus-sasl-2.1.28.tar.gz
+mv cyrus-sasl-2.1.28 sasl
+cd sasl
+cmake -G "Visual Studio 17 2022" -A $CMakeOptA \
+  -DOPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL \
+  -DDB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
+  -DDB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
+  -DCMAKE_BUILD_TYPE=$build_config \
+  .
+cmake --build . --config $build_config
+cd ..
 
 # go back to source root
 cd ..
@@ -89,8 +102,8 @@ cmake \
 	-D WITH_EXAMPLES=OFF \
 	-D WITH_TESTS=OFF \
 	-DWITH_SASL=ON \
-	-DSASL_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
-	-DSASL_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libsasl.lib \
+	-DSASL_INCLUDE_DIR=$LIBVNCPath/deps/sasl/include \
+	-DSASL_LIBRARY=$LIBVNCPath/deps/sasl/$build_config/libsasl.lib \
 	-D CMAKE_BUILD_TYPE=$build_config \
 	.
 cmake --build . --config $build_config
