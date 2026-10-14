@@ -56,7 +56,8 @@ cd ..
 # Berkeley DB - required by SASL
 # Use vcpkg (pre-installed on GitHub Windows runners) instead of building from source
 # This avoids the old .dsp/.sln upgrade hassle
-vcpkg install berkeley-db:x64-windows-static
+# Port name in vcpkg is 'db' (not 'berkeley-db')
+vcpkg install db:x64-windows-static
 # Set environment variables for CMake to find vcpkg-installed Berkeley DB
 export DB_ROOT="$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static"
 
