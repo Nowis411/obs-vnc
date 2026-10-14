@@ -54,14 +54,11 @@ cmake --build . --config $build_config
 cd ..
 
 # Berkeley DB - required by SASL
-# Use Oracle URL with tar extraction, ignore symlink errors (Java examples not needed)
-curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.tar.gz
-tar xzf db-4.1.25.tar.gz 2>/dev/null || true
-mv db-4.1.25 db
-cd db/build_win32
-# Use dotnet msbuild (available on GitHub Windows runners) - note: uses -p: not /p:
-dotnet msbuild db_dll.sln -p:Configuration=$build_config -p:Platform=$CMakeOptA
-cd ../..
+# Use vcpkg (pre-installed on GitHub Windows runners) instead of building from source
+# This avoids the old .dsp/.sln upgrade hassle
+vcpkg install berkeley-db:x64-windows-static
+# Set environment variables for CMake to find vcpkg-installed Berkeley DB
+export DB_ROOT="$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static"
 
 # Cyrus SASL
 curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
@@ -70,8 +67,8 @@ mv cyrus-sasl-2.1.28 sasl
 cd sasl
 cmake -G "Visual Studio 17 2022" -A $CMakeOptA \
   -DOPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL \
-  -DDB_INCLUDE_DIR=$LIBVNCPath/deps/db/build_win32 \
-  -DDB_LIBRARY=$LIBVNCPath/deps/db/build_win32/$build_config/libdb41.lib \
+  -DDB_INCLUDE_DIR=$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/include \
+  -DDB_LIBRARY=$VCPKG_INSTALLATION_ROOT/installed/x64-windows-static/lib/libdb.lib \
   .
 cmake --build . --config $build_config
 cd ..
