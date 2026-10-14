@@ -71,15 +71,31 @@ vcpkg install berkeleydb:$VCPKG_TRIPLET --recurse
 # This avoids krb5 build issues on static Windows
 curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
 tar xzf cyrus-sasl-2.1.28.tar.gz
-mv cyrus-sasl-2.1.28 sasl
+# Find the extracted directory (may have different name)
+SASL_DIR=$(find . -maxdepth 1 -type d -name 'cyrus-sasl-*' | head -1)
+mv "$SASL_DIR" sasl
 cd sasl
-cmake -G "Visual Studio 17 2022" -A $CMakeOptA \
-  -DOPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL \
-  -DDB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
-  -DDB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
-  -DCMAKE_BUILD_TYPE=$build_config \
-  .
-cmake --build . --config $build_config
+# Check for CMakeLists.txt, fall back to Visual Studio solution
+if [ -f CMakeLists.txt ]; then
+    cmake -G "Visual Studio 17 2022" -A $CMakeOptA \
+      -DOPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL \
+      -DDB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
+      -DDB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
+      -DCMAKE_BUILD_TYPE=$build_config \
+      .
+    cmake --build . --config $build_config
+else
+    # Use the Visual Studio solution files
+    # Look for .sln file in win32 or root
+    SLN_FILE=$(find . -maxdepth 2 -name '*.sln' | head -1)
+    if [ -n "$SLN_FILE" ]; then
+        DEVENV_COM="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/devenv.com"
+        "$DEVENV_COM" "$SLN_FILE" /build "$build_config" /project "libsasl"
+    else
+        echo "No CMakeLists.txt or .sln file found in SASL source"
+        exit 1
+    fi
+fi
 cd ..
 
 # go back to source root
