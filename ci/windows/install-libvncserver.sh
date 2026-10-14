@@ -59,8 +59,9 @@ curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.
 tar xzf db-4.1.25.tar.gz 2>/dev/null || true
 mv db-4.1.25 db
 cd db/build_win32
-# Use devenv.com (available on GitHub Windows runners) to upgrade .dsp to .sln, then build with msbuild
-devenv.com db_dll.dsp /upgrade
+# Use devenv.com (full path on GitHub Windows runners) to upgrade .dsp to .sln, then build with dotnet msbuild
+DEVENV_COM="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/devenv.com"
+"$DEVENV_COM" db_dll.dsp /upgrade
 dotnet msbuild db_dll.sln -p:Configuration=$build_config -p:Platform=$CMakeOptA
 cd ../..
 
