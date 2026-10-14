@@ -65,8 +65,9 @@ if [ "$CMakeOptA" = "Win32" ]; then
     VCPKG_TRIPLET="x86-windows-static"
 fi
 
-# krb5 (dependency of cyrus-sasl) doesn't support x64-windows-static, use --allow-unsupported
-vcpkg install berkeleydb:$VCPKG_TRIPLET cyrus-sasl:$VCPKG_TRIPLET --recurse --allow-unsupported
+# krb5 (dependency of cyrus-sasl) doesn't build on static Windows.
+# Install cyrus-sasl without kerberos feature to avoid krb5 dependency.
+vcpkg install berkeleydb:$VCPKG_TRIPLET cyrus-sasl[~kerberos]:$VCPKG_TRIPLET --recurse
 
 # go back to source root
 cd ..
