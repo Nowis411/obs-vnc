@@ -54,8 +54,10 @@ cmake --build . --config $build_config
 cd ..
 
 # Berkeley DB - required by SASL
-curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.tar.gz
-7z x db-4.1.25.tar.gz -so | 7z x -si -ttar > /dev/null
+# Use fossilies.org mirror (more reliable than Oracle, no symlink issues on Windows)
+curl -fsSL -o db-4.1.25.tar.gz https://fossies.org/linux/privat/db-4.1.25.tar.gz
+# Use tar instead of 7z for .tar.gz (handles symlinks better on GitHub Windows runners)
+tar xzf db-4.1.25.tar.gz
 mv db-4.1.25 db
 cd db/build_win32
 cmake -G "Visual Studio 17 2022" -A $CMakeOptA ..
@@ -64,7 +66,7 @@ cd ../..
 
 # Cyrus SASL
 curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
-7z x cyrus-sasl-2.1.28.tar.gz -so | 7z x -si -ttar > /dev/null
+tar xzf cyrus-sasl-2.1.28.tar.gz
 mv cyrus-sasl-2.1.28 sasl
 cd sasl
 cmake -G "Visual Studio 17 2022" -A $CMakeOptA \
