@@ -54,9 +54,9 @@ cmake --build . --config $build_config
 cd ..
 
 # Berkeley DB - required by SASL
-# Use Oracle URL with tar extraction (tar handles symlinks, 7z does not on Windows)
+# Use Oracle URL with tar extraction, ignore symlink errors (Java examples not needed)
 curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.tar.gz
-tar xzf db-4.1.25.tar.gz
+tar xzf db-4.1.25.tar.gz 2>/dev/null || true
 mv db-4.1.25 db
 cd db/build_win32
 cmake -G "Visual Studio 17 2022" -A $CMakeOptA ..
