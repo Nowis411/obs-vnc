@@ -59,8 +59,8 @@ curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.
 tar xzf db-4.1.25.tar.gz 2>/dev/null || true
 mv db-4.1.25 db
 cd db/build_win32
-# Use dotnet msbuild (available on GitHub Windows runners)
-dotnet msbuild db_dll.sln /p:Configuration=$build_config /p:Platform=$CMakeOptA
+# Use dotnet msbuild (available on GitHub Windows runners) - note: uses -p: not /p:
+dotnet msbuild db_dll.sln -p:Configuration=$build_config -p:Platform=$CMakeOptA
 cd ../..
 
 # Cyrus SASL
