@@ -54,9 +54,8 @@ cmake --build . --config $build_config
 cd ..
 
 # Berkeley DB - required by SASL
-# Use fossilies.org mirror (more reliable than Oracle, no symlink issues on Windows)
-curl -fsSL -o db-4.1.25.tar.gz https://fossies.org/linux/privat/db-4.1.25.tar.gz
-# Use tar instead of 7z for .tar.gz (handles symlinks better on GitHub Windows runners)
+# Use Oracle URL with tar extraction (tar handles symlinks, 7z does not on Windows)
+curl -fsSL -o db-4.1.25.tar.gz http://download.oracle.com/berkeley-db/db-4.1.25.tar.gz
 tar xzf db-4.1.25.tar.gz
 mv db-4.1.25 db
 cd db/build_win32
