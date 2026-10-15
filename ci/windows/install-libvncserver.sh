@@ -68,34 +68,34 @@ fi
 vcpkg install berkeleydb:$VCPKG_TRIPLET --recurse
 
 # Build Cyrus SASL from source using vcpkg-installed Berkeley DB
-# This avoids krb5 build issues on static Windows
+# Use msbuild directly on .vcxproj files for faster build
 curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
 tar xzf cyrus-sasl-2.1.28.tar.gz
 # Find the extracted directory (may have different name)
 SASL_DIR=$(find . -maxdepth 1 -type d -name 'cyrus-sasl-*' | head -1)
 mv "$SASL_DIR" sasl
 cd sasl
-# Check for CMakeLists.txt, fall back to Visual Studio solution
-if [ -f CMakeLists.txt ]; then
-    cmake -G "Visual Studio 17 2022" -A $CMakeOptA \
-      -DOPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL \
-      -DDB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
-      -DDB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
-      -DCMAKE_BUILD_TYPE=$build_config \
-      .
-    cmake --build . --config $build_config
-else
-    # Use the Visual Studio solution files
-    # Look for .sln file in win32 or root
-    SLN_FILE=$(find . -maxdepth 2 -name '*.sln' | head -1)
-    if [ -n "$SLN_FILE" ]; then
-        DEVENV_COM="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/devenv.com"
-        "$DEVENV_COM" "$SLN_FILE" /build "$build_config" /project "libsasl"
-    else
-        echo "No CMakeLists.txt or .sln file found in SASL source"
-        exit 1
-    fi
-fi
+
+# Build using msbuild on the libsasl.vcxproj directly (faster than devenv.com)
+# The SASL source has Visual Studio projects in win32/
+cd win32
+# Update the project files to use the vcpkg-installed Berkeley DB
+# We'll build libsasl.vcxproj directly
+MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe"
+"$MSBUILD" libsasl.vcxproj -p:Configuration=$build_config -p:Platform=$CMakeOptA \
+  -p:DB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
+  -p:DB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
+  -p:OPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL
+
+# Copy the built library and headers to expected locations
+cd ..
+mkdir -p include/sasl
+cp -r include/*.h include/sasl/ 2>/dev/null || true
+# The built library will be in win32/$build_config/
+mkdir -p $build_config
+cp win32/$build_config/libsasl.lib $build_config/ 2>/dev/null || \
+cp win32/$build_config/sasl.lib $build_config/libsasl.lib 2>/dev/null || true
+
 cd ..
 
 # go back to source root
