@@ -53,59 +53,43 @@ cmake . -A $CMakeOptA -DZLIB_INCLUDE_DIR=$OBSDeps/include -DZLIB_LIBRARY=$OBSDep
 cmake --build . --config $build_config
 cd ..
 
-# Use vcpkg for Berkeley DB (pre-installed on GitHub runners)
-# This avoids the slow devenv.com /upgrade step for Berkeley DB
+# Use vcpkg for Berkeley DB and Cyrus SASL (pre-installed on GitHub runners)
+# Use non-static triplet for SASL to avoid krb5 build issues on static Windows
 export VCPKG_ROOT=${VCPKG_ROOT:-/c/vcpkg}
 export PATH="$VCPKG_ROOT:$PATH"
 
-# Install Berkeley DB via vcpkg
-# Use triplet matching our architecture
-VCPKG_TRIPLET="${CMakeOptA}-windows-static"
+# Install Berkeley DB via vcpkg (static)
+VCPKG_TRIPLET_STATIC="${CMakeOptA}-windows-static"
 if [ "$CMakeOptA" = "Win32" ]; then
-    VCPKG_TRIPLET="x86-windows-static"
+    VCPKG_TRIPLET_STATIC="x86-windows-static"
 fi
 
-vcpkg install berkeleydb:$VCPKG_TRIPLET --recurse
+vcpkg install berkeleydb:$VCPKG_TRIPLET_STATIC --recurse
 
-# Build Cyrus SASL from source using vcpkg-installed Berkeley DB
-# Use msbuild directly on .vcxproj files for faster build
-curl -fsSL -o cyrus-sasl-2.1.28.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
-tar xzf cyrus-sasl-2.1.28.tar.gz
-# Find the extracted directory (may have different name)
-SASL_DIR=$(find . -maxdepth 1 -type d -name 'cyrus-sasl-*' | head -1)
-mv "$SASL_DIR" sasl
-cd sasl
-
-# Build using msbuild on the sasl2.vcxproj directly (faster than devenv.com)
-# The SASL source has Visual Studio projects in win32/
-cd win32
-# Update the project files to use the vcpkg-installed Berkeley DB
-# We'll build sasl2.vcxproj directly
-MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe"
-# Use Windows SDK 10.0 (available on GitHub runners) instead of 8.1
-# SASL projects only have Debug/Release configurations, map RelWithDebInfo to Release
-# Retarget from VS2015 (v140) to current VS2022 (v143)
-SASL_CONFIG="$build_config"
-if [ "$build_config" = "RelWithDebInfo" ]; then
-    SASL_CONFIG="Release"
+# Install Cyrus SASL via vcpkg (non-static to avoid krb5 build issues)
+VCPKG_TRIPLET_DYNAMIC="${CMakeOptA}-windows"
+if [ "$CMakeOptA" = "Win32" ]; then
+    VCPKG_TRIPLET_DYNAMIC="x86-windows"
 fi
-"$MSBUILD" sasl2.vcxproj -p:Configuration=$SASL_CONFIG -p:Platform=$CMakeOptA \
-  -p:WindowsTargetPlatformVersion=10.0 \
-  -p:PlatformToolset=v143 \
-  -p:DB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
-  -p:DB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
-  -p:OPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL
 
-# Copy the built library and headers to expected locations
-cd ..
-mkdir -p include/sasl
-cp -r include/*.h include/sasl/ 2>/dev/null || true
-# The built library will be in win32/$SASL_CONFIG/
-mkdir -p $build_config
-cp win32/$SASL_CONFIG/sasl2.lib $build_config/libsasl.lib 2>/dev/null || \
-cp win32/$SASL_CONFIG/sasl.lib $build_config/libsasl.lib 2>/dev/null || true
+vcpkg install cyrus-sasl:$VCPKG_TRIPLET_DYNAMIC --recurse
 
-cd ..
+# Copy SASL headers and libraries to expected locations
+# vcpkg installs to installed/<triplet>/include and installed/<triplet>/lib
+mkdir -p $LIBVNCPath/deps/sasl/include/sasl
+cp -r $VCPKG_ROOT/installed/$VCPKG_TRIPLET_DYNAMIC/include/sasl/*.h $LIBVNCPath/deps/sasl/include/sasl/ 2>/dev/null || \
+cp -r $VCPKG_ROOT/installed/$VCPKG_TRIPLET_DYNAMIC/include/*.h $LIBVNCPath/deps/sasl/include/sasl/ 2>/dev/null || true
+
+mkdir -p $LIBVNCPath/deps/sasl/$build_config
+# vcpkg non-static builds dynamic libraries (.dll and .lib import library)
+# We need to copy the import library as libsasl.lib
+cp $VCPKG_ROOT/installed/$VCPKG_TRIPLET_DYNAMIC/lib/libsasl.lib $LIBVNCPath/deps/sasl/$build_config/libsasl.lib 2>/dev/null || \
+cp $VCPKG_ROOT/installed/$VCPKG_TRIPLET_DYNAMIC/lib/sasl.lib $LIBVNCPath/deps/sasl/$build_config/libsasl.lib 2>/dev/null || true
+
+# Also copy the DLL for runtime
+mkdir -p $LIBVNCPath/$build_config
+cp $VCPKG_ROOT/installed/$VCPKG_TRIPLET_DYNAMIC/bin/libsasl.dll $LIBVNCPath/$build_config/ 2>/dev/null || \
+cp $VCPKG_ROOT/installed/$VCPKG_TRIPLET_DYNAMIC/bin/sasl.dll $LIBVNCPath/$build_config/ 2>/dev/null || true
 
 # go back to source root
 cd ..
