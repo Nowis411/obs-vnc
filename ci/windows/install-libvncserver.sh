@@ -82,7 +82,9 @@ cd win32
 # Update the project files to use the vcpkg-installed Berkeley DB
 # We'll build sasl2.vcxproj directly
 MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe"
+# Use Windows SDK 10.0 (available on GitHub runners) instead of 8.1
 "$MSBUILD" sasl2.vcxproj -p:Configuration=$build_config -p:Platform=$CMakeOptA \
+  -p:WindowsTargetPlatformVersion=10.0 \
   -p:DB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
   -p:DB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
   -p:OPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL
