@@ -83,7 +83,12 @@ cd win32
 # We'll build sasl2.vcxproj directly
 MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe"
 # Use Windows SDK 10.0 (available on GitHub runners) instead of 8.1
-"$MSBUILD" sasl2.vcxproj -p:Configuration=$build_config -p:Platform=$CMakeOptA \
+# SASL projects only have Debug/Release configurations, map RelWithDebInfo to Release
+SASL_CONFIG="$build_config"
+if [ "$build_config" = "RelWithDebInfo" ]; then
+    SASL_CONFIG="Release"
+fi
+"$MSBUILD" sasl2.vcxproj -p:Configuration=$SASL_CONFIG -p:Platform=$CMakeOptA \
   -p:WindowsTargetPlatformVersion=10.0 \
   -p:DB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
   -p:DB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
@@ -93,10 +98,10 @@ MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Curren
 cd ..
 mkdir -p include/sasl
 cp -r include/*.h include/sasl/ 2>/dev/null || true
-# The built library will be in win32/$build_config/
+# The built library will be in win32/$SASL_CONFIG/
 mkdir -p $build_config
-cp win32/$build_config/sasl2.lib $build_config/libsasl.lib 2>/dev/null || \
-cp win32/$build_config/sasl.lib $build_config/libsasl.lib 2>/dev/null || true
+cp win32/$SASL_CONFIG/sasl2.lib $build_config/libsasl.lib 2>/dev/null || \
+cp win32/$SASL_CONFIG/sasl.lib $build_config/libsasl.lib 2>/dev/null || true
 
 cd ..
 
