@@ -76,13 +76,13 @@ SASL_DIR=$(find . -maxdepth 1 -type d -name 'cyrus-sasl-*' | head -1)
 mv "$SASL_DIR" sasl
 cd sasl
 
-# Build using msbuild on the libsasl.vcxproj directly (faster than devenv.com)
+# Build using msbuild on the sasl2.vcxproj directly (faster than devenv.com)
 # The SASL source has Visual Studio projects in win32/
 cd win32
 # Update the project files to use the vcpkg-installed Berkeley DB
-# We'll build libsasl.vcxproj directly
+# We'll build sasl2.vcxproj directly
 MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe"
-"$MSBUILD" libsasl.vcxproj -p:Configuration=$build_config -p:Platform=$CMakeOptA \
+"$MSBUILD" sasl2.vcxproj -p:Configuration=$build_config -p:Platform=$CMakeOptA \
   -p:DB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
   -p:DB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
   -p:OPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL
@@ -93,7 +93,7 @@ mkdir -p include/sasl
 cp -r include/*.h include/sasl/ 2>/dev/null || true
 # The built library will be in win32/$build_config/
 mkdir -p $build_config
-cp win32/$build_config/libsasl.lib $build_config/ 2>/dev/null || \
+cp win32/$build_config/sasl2.lib $build_config/libsasl.lib 2>/dev/null || \
 cp win32/$build_config/sasl.lib $build_config/libsasl.lib 2>/dev/null || true
 
 cd ..
