@@ -84,12 +84,14 @@ cd win32
 MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe"
 # Use Windows SDK 10.0 (available on GitHub runners) instead of 8.1
 # SASL projects only have Debug/Release configurations, map RelWithDebInfo to Release
+# Retarget from VS2015 (v140) to current VS2022 (v143)
 SASL_CONFIG="$build_config"
 if [ "$build_config" = "RelWithDebInfo" ]; then
     SASL_CONFIG="Release"
 fi
 "$MSBUILD" sasl2.vcxproj -p:Configuration=$SASL_CONFIG -p:Platform=$CMakeOptA \
   -p:WindowsTargetPlatformVersion=10.0 \
+  -p:PlatformToolset=v143 \
   -p:DB_INCLUDE_DIR=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/include \
   -p:DB_LIBRARY=$VCPKG_ROOT/installed/$VCPKG_TRIPLET/lib/libdb.lib \
   -p:OPENSSL_ROOT_DIR=/c/Program\ Files/OpenSSL
